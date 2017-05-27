@@ -24,4 +24,7 @@ public interface GithubService {
 
     @GET("/users/{user}/starred")
     Observable<List<GitHubRepo>> starred(@Path("user") String user);
+
+    @GET("/users/{user}")
+    Call<GitHubRepo> getUser(@Path("user") String user);
 }

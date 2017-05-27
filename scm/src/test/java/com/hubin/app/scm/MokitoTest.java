@@ -2,22 +2,31 @@ package com.hubin.app.scm;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.hubin.app.scm.models.GitHubRepo;
+import com.hubin.app.scm.services.github.GithubService;
 
-import org.hamcrest.Matchers;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
+import java.util.concurrent.Executor;
 
-import rx.Observable;
+import okhttp3.OkHttpClient;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import retrofit2.Call;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 /**
  * Created by hubin on 2017/5/21.
@@ -25,77 +34,115 @@ import static org.hamcrest.core.Is.is;
 @RunWith(RobolectricTestRunner.class)
 @Config(constants = BuildConfig.class)
 public class MokitoTest {
-    Github mGithub = GithubFactory.getSingleton();
 
-    Github mMockGithub;
-    Client mMockClient;
-
+    @Mock
+    OkHttpClient mMockClient;
+    GithubService client;
+    MockWebServer mockWebServer;
     @Before public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @After
+    public void tearDown() {
+
+    }
+
+    @Test public void reposTest1() throws InterruptedException, IOException {
+        mockWebServer = new MockWebServer();
+
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
                 .serializeNulls()
                 .create();
-        mMockClient = mock(Client.class);
-        RequestInterceptor requestInterceptor = request -> request.addHeader("User-Agent",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0");
-        RestAdapter restAdapter = new RestAdapter.Builder().setClient(mMockClient)
-                .setLogLevel(RestAdapter.LogLevel.FULL)
-                .setEndpoint("https://api.github.com")
-                .setConverter(new GsonConverter(gson))
-                .setRequestInterceptor(requestInterceptor)
+        Retrofit retrofit =  new Retrofit.Builder()
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .baseUrl(mockWebServer.url("").toString())
+//                .client(mMockClient)
                 .build();
-        mMockGithub = restAdapter.create(Github.class);
+        client =  retrofit.create(GithubService.class);
+        //Set a response for retrofit to handle. You can copy a sample
+        //response from your server to simulate a correct result or an error.
+        //MockResponse can also be customized with different parameters
+        //to match your test needs
+        mockWebServer.enqueue(createResponse());
+//        mockWebServer.enqueue(createListResponse());
+
+        //With your service created you can now call its method that should
+        //consume the MockResponse above. You can then use the desired
+        //assertion to check if the result is as expected. For example:
+        Call<GitHubRepo> call = client.getUser("hubinjisu");
+        GitHubRepo result = call.execute().body();
+
+        assertTrue(result != null);
+        assertEquals("tom", result.getName());
+
+//        Call<List<GitHubRepo>> listCall = client.reposForUser("hu");
+//        List<GitHubRepo> listResult = listCall.execute().body();
+//        assertTrue(listResult != null);
+//        assertEquals(3, listResult.size());
+//        assertEquals("atom", listResult.get(2).getName());
+
+//        final AtomicReference<GitHubRepo> actual = new AtomicReference<>();
+//        final CountDownLatch latch = new CountDownLatch(1);
+//        call.enqueue(new Callback<GitHubRepo>() {
+//            @Override
+//            public void onResponse(Call<GitHubRepo> call, Response<GitHubRepo> response) {
+//                actual.set(response.body());
+//                latch.countDown();
+//            }
+//
+//            @Override
+//            public void onFailure(Call<GitHubRepo> call, Throwable t) {
+//                actual.set(null);
+//                latch.countDown();
+//            }
+//        });
+//        latch.await();
+////        assertTrue(latch.await(1, SECONDS));
+//
+//        assertThat(actual.get()).isEqualTo("Response!");
+        //Finish web server
+        mockWebServer.shutdown();
     }
 
-    @Test public void reposTest1() throws IOException {
-        String mockJsonResult =
-                "这里模拟数据太长就不贴了，请看代码吧";
-        FakeHttp.addPendingHttpResponse(200, mockJsonResult);
+//    @Test
+//    public void realTest() {
+//        OkHttpClient.Builder client = new OkHttpClient.Builder();
+//        OkHttpClient httpClient = client.dispatcher(new Dispatcher(new ImmediateExecutor())).build();
+//        OkHttpClient client = OkHttpClient.Builder().
+//                OkHttpClient.Builder()
+//                .dispatcher(new Dispatcher(new ImmediateExecutor()))
+//                .build();
+//
+//        Retrofit retrofit = new Retrofit.Builder()
+//                .client(client)
+//                //Your params
+//                .build();
+//    }
 
-        HttpGet httpGet = new HttpGet("http://www.baidu.com");
-        HttpResponse httpResponse = new DefaultHttpClient().execute(httpGet);
-        String result = EntityUtils.toString(httpResponse.getEntity());
-        System.out.print(result);
-        assertThat(result, is(mockJsonResult));
+
+    private MockResponse createResponse() {
+        MockResponse response = new MockResponse()
+                .addHeader("Content-Type", "application/json; charset=utf-8")
+                .addHeader("Cache-Control", "no-cache")
+                .setResponseCode(200)
+                .setBody("{\"id\":\"123\", \"name\":\"tom\"}");
+        response.throttleBody(1024, 1, SECONDS);
+        return response;
+    }
+    private MockResponse createListResponse() {
+        MockResponse response = new MockResponse()
+                .addHeader("Content-Type", "application/json; charset=utf-8")
+                .addHeader("Cache-Control", "no-cache")
+                .setResponseCode(200)
+                .setBody("{{\"id\":\"123\", \"name\":\"tom\"}, {\"id\":\"234\", \"name\":\"test\"}, {\"id\":\"345\", \"name\":\"atom\"}}");
+        response.throttleBody(1024, 1, SECONDS);
+        return response;
     }
 
-    //这个是走真实网络返回的数据
-    @Test public void reposTest2() {
-        List<Repo> list = mGithub.listRepos("devinshine");
-        assertThat(list.size(), is(not(0)));
-        System.out.print(list.size());
+    public class ImmediateExecutor implements Executor {
+        @Override public void execute(Runnable command) {
+            command.run();
+        }
     }
-
-    //这个是走真实网络返回的数据
-    @Test public void reposTestByObservable() {
-        int size = mGithub.listRepos2Observable("devinshine")
-                .flatMap(Observable::from)
-                .count()
-                .toBlocking()
-                .single();
-        assertThat(size, is(not(0)));
-        System.out.print(size);
-
-        //下面代码是会报错的
-        //TestSubscriber<Repo> testSubscriber = new TestSubscriber<>();
-        //mGithub.listRepos2Observable("devinshine")
-        //    .flatMap(Observable::from)
-        //    .subscribe(testSubscriber);
-        //assertThat(testSubscriber.getOnNextEvents().size(),is(not(0)));
-    }
-
-    //这是走模拟数据
-    @Test public void reposTestByMockClient() throws IOException {
-        String mockJsonResult =
-                "这里模拟数据太长就不贴了，请看代码吧";
-        Response response =
-                new Response("http://www.baidu.com", 200, "nothing", Collections.EMPTY_LIST,
-                        new TypedByteArray("application/json", mockJsonResult.getBytes()));
-        when(mMockClient.execute(Matchers.anyObject())).thenReturn(response);
-
-        int size = mMockGithub.listRepos2Observable("devinshine")
-                .flatMap(Observable::from)
-                .count()
-                .toBlocking()
-                .single();
-        assertThat(size, is(1));
 }

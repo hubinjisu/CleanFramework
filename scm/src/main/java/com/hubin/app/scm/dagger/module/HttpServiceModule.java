@@ -19,11 +19,11 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * Created by hubin on 2017/5/20.
  */
 @Module
-public class ServiceModule {
+public class HttpServiceModule {
     Application application;
     String baseUrl;
 
-    public ServiceModule(Application application, String baseUrl) {
+    public HttpServiceModule(Application application, String baseUrl) {
         this.application = application;
         this.baseUrl = baseUrl;
     }

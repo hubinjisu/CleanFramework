@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
         call.enqueue(new Callback<List<GitHubRepo>>() {
             @Override
             public void onResponse(Call<List<GitHubRepo>> call, Response<List<GitHubRepo>> response) {
-                Log.i("MainActivity","onResponse:"+ response.body());
+                Log.i("MainActivity","onResponse:"+ response.body().toString());
                 if (response.body() != null)  {
                     Log.i("MainActivity","onResponse:"+ response.body().get(0).getName());
                 }
