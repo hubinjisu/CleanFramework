@@ -2,7 +2,7 @@ package com.hubin.app.cleanframework;
 
 import android.widget.Button;
 
-import com.hubin.app.cleanframework.ui.LoginActivity;
+import com.hubin.app.cleanframework.ui.mvp.login.LoginActivity;
 
 import org.junit.Before;
 import org.junit.Test;

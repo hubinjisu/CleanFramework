@@ -1,4 +1,4 @@
-package com.hubin.app.cleanframework.ui;
+package com.hubin.app.cleanframework.ui.mvp.login;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -30,6 +30,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.hubin.app.cleanframework.R;
+import com.hubin.app.cleanframework.ui.MainActivity;
 
 import java.util.ArrayList;
 import java.util.List;
